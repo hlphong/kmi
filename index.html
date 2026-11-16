@@ -269,37 +269,9 @@
         #photo-lightbox.open img {
             transform: scale(1);
         }
-
-        /* Nút điều khiển âm thanh chung */
-        .audio-toggle-btn {
-            position: fixed;
-            bottom: 18px;
-            left: 18px;
-            z-index: 100;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.88);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(244, 114, 182, 0.45);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .audio-toggle-btn:hover {
-            transform: scale(1.1);
-        }
     </style>
 </head>
 <body>
-
-    <!-- Nút bật/tắt nhạc nền Piano dịu nhẹ -->
-    <button id="global-audio-btn" class="audio-toggle-btn" title="Bật/Tắt nhạc nền tri ân">
-        <span id="audio-icon" class="text-rose-500 text-lg">🔇</span>
-    </button>
 
     <!-- ===================================================================== -->
     <!-- MÀN HÌNH 1: BÙNG NỔ HOA NGAY KHI MỞ TRANG (AUTO FLOWER BLOOM INTRO)   -->
@@ -528,7 +500,7 @@
     <!-- ===================================================================== -->
     <script>
         /**
-         * 1. HỆ THỐNG ÂM THANH NHẠC NỀN TỪ GITHUB (MP3 STREAM)
+         * 1. HỆ THỐNG ÂM THANH NHẠC NỀN TỰ ĐỘNG PHÁT
          */
         class GentlePianoAudio {
             constructor() {
@@ -536,60 +508,41 @@
                 this.audio.loop = true;
                 this.audio.preload = 'auto';
                 this.isPlaying = false;
-
-                this.audio.addEventListener('play', () => {
-                    this.isPlaying = true;
-                    this.updateUI();
-                });
-
-                this.audio.addEventListener('pause', () => {
-                    this.isPlaying = false;
-                    this.updateUI();
-                });
+                this.initAutoPlay();
             }
 
-            toggle() {
-                if (this.isPlaying) {
-                    this.stop();
-                } else {
-                    this.start();
-                }
-                return this.isPlaying;
+            initAutoPlay() {
+                const tryPlay = () => {
+                    this.audio.play().then(() => {
+                        this.isPlaying = true;
+                        window.removeEventListener('click', tryPlay);
+                        window.removeEventListener('touchstart', tryPlay);
+                        window.removeEventListener('keydown', tryPlay);
+                    }).catch(err => {
+                        // Trình duyệt chặn autoplay khi chưa có tương tác
+                        console.warn('Đang chờ tương tác đầu tiên để phát nhạc:', err);
+                    });
+                };
+
+                // Thử phát ngay khi tải trang
+                tryPlay();
+
+                // Lắng nghe tương tác đầu tiên của người dùng để kích hoạt nhạc nếu bị chặn
+                window.addEventListener('click', tryPlay, { once: true });
+                window.addEventListener('touchstart', tryPlay, { once: true });
+                window.addEventListener('keydown', tryPlay, { once: true });
             }
 
             start() {
-                if (this.isPlaying) return;
-                const playPromise = this.audio.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
+                if (!this.isPlaying) {
+                    this.audio.play().then(() => {
                         this.isPlaying = true;
-                        this.updateUI();
-                    }).catch((err) => {
-                        console.warn('Trình duyệt chờ tương tác để phát nhạc:', err);
-                        this.isPlaying = false;
-                        this.updateUI();
-                    });
+                    }).catch(e => console.warn(e));
                 }
-            }
-
-            stop() {
-                this.audio.pause();
-                this.isPlaying = false;
-                this.updateUI();
-            }
-
-            updateUI() {
-                const globalIcon = document.getElementById('audio-icon');
-                if (globalIcon) globalIcon.textContent = this.isPlaying ? '🔊' : '🔇';
             }
         }
 
         const piano = new GentlePianoAudio();
-
-        document.getElementById('global-audio-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            piano.toggle();
-        });
 
         /**
          * 2. QUẢN LÝ CHUYỂN ĐỔI GIỮA CÁC MÀN HÌNH
@@ -839,9 +792,7 @@
         }
 
         document.getElementById('stage-1').addEventListener('click', () => {
-            if (!piano.isPlaying) {
-                piano.start();
-            }
+            piano.start();
             advanceFromFlowersToStage2();
         });
 
@@ -849,9 +800,7 @@
          * 4. MÀN HÌNH 2 -> MÀN HÌNH 3: LÁ THƯ TRI ÂN
          */
         document.getElementById('gratitude-letter-btn').addEventListener('click', () => {
-            if (!piano.isPlaying) {
-                piano.start();
-            }
+            piano.start();
             goToStage(3);
         });
 
